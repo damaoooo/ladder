@@ -14,7 +14,7 @@ services:
     restart: always
     network_mode: "service:trojan"
     volumes:
-      - ./nginx_config.conf:/etc/nginx/nginx_config.conf
+      - ./nginx_config.conf:/etc/nginx/conf.d/nginx_config.conf
       - /etc/letsencrypt:/etc/letsencrypt
       
   v2ray:
