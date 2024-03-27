@@ -18,11 +18,15 @@ if [ `whoami` != "root" ];then
 	exit
 fi
 
-# Install Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sh get-docker.sh
+if command -v docker &> /dev/null; then
+    echo "Docker is already installed"
+else
+    echo "Docker is not installed"
+    # Install Docker
+    curl -fsSL https://get.docker.com -o get-docker.sh
+    sh get-docker.sh
+fi
 
-# dockerd-rootless-setuptool.sh install
 
 # docker get 
 docker pull gogost/gost:3.0.0-rc8
@@ -56,7 +60,6 @@ if [ -z "$DNS_FULL_NAME" ]; then
     echo "DNS Full Name is empty"
     exit 1
 fi
-
 python ./ladder.py --dns_name $DNS_FULL_NAME
 
 docker run -it --rm --name certbot \
