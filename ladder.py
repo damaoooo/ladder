@@ -202,7 +202,7 @@ def create_dns_record(password: str, dns_name: str):
         exit(1)
         
     dns_solver.create_dns_record(trojan_dns, ipv4)
-    dns_solver.create_dns_record(v2ray_dns, ipv4, proxied=True)
+    dns_solver.create_dns_record(v2ray_dns, ipv4)
     
         
     print_green("Create DNS record successfully!")
