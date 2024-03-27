@@ -68,6 +68,7 @@ docker run -it --rm --name certbot \
     certbot/dns-cloudflare certonly \
     --dns-cloudflare \
     --dns-cloudflare-credentials /.token \
+    --dns-cloudflare-propagation-seconds 30 \
     -d "v2ray.v4.${DNS_FULL_NAME}"
 
 docker run -it --rm --name certbot \
@@ -77,6 +78,7 @@ docker run -it --rm --name certbot \
     certbot/dns-cloudflare certonly \
     --dns-cloudflare \
     --dns-cloudflare-credentials /.token \
+    --dns-cloudflare-propagation-seconds 30 \
     -d "trojan.v4.${DNS_FULL_NAME}"
 
 # Enable trojan and v2ray and nginx in docker-compose.yml
