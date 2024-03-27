@@ -6,7 +6,8 @@ services:
     network_mode: host
     volumes:
       - ./trojan_config.json:/config/config.json
-
+      - /etc/letsencrypt:/etc/letsencrypt
+  
   nginx:
     image: nginx
     container_name: nginx
@@ -14,7 +15,8 @@ services:
     network_mode: "service:trojan"
     volumes:
       - ./nginx_config.conf:/etc/nginx/nginx_config.conf
-
+      - /etc/letsencrypt:/etc/letsencrypt
+      
   v2ray:
     image: v2fly/v2fly-core
     container_name: v2ray
@@ -24,4 +26,6 @@ services:
       - V2RAY_VMESS_AEAD_FORCED=false
     volumes:
       - ./v2ray_config.json:/etc/v2ray/config.json
+      - /etc/letsencrypt:/etc/letsencrypt
+      
     command: ["run", "-c", "/etc/v2ray/config.json"]
