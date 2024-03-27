@@ -51,8 +51,8 @@ print_message "git python pip 安装完成" "$GREEN"
 pip3 install requests
 
 # pull configuration files
-git pull https://github.com/damaoooo/unknown_script
-cd unknown_script
+git clone https://github.com/damaoooo/ladder.git
+cd ladder
 
 read -p "Enter the DNS Full Name(aaa.bbb.ccc): " DNS_FULL_NAME
 
