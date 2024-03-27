@@ -14,14 +14,14 @@ print_message() {
 }
 
 if [ `whoami` != "root" ];then
-    echo "Please run this script as root user!"
+    print_message "Please run this script as root user!" "$RED"
 	exit
 fi
 
 if command -v docker &> /dev/null; then
-    echo "Docker is already installed"
+    print_message "Docker is already installed!" "$GREEN"
 else
-    echo "Docker is not installed"
+    print_message "Docker is not installed! Will Install it..." "$RED"
     # Install Docker
     curl -fsSL https://get.docker.com -o get-docker.sh
     sh get-docker.sh
@@ -33,11 +33,9 @@ docker pull gogost/gost:3.0.0-rc8
 docker pull trojangfw/trojan
 docker pull v2fly/v2fly-core
 docker pull certbot/dns-cloudflare
+docker pull nginx
 
-if command -v apt &> /dev/null; then
-    apt update > /dev/null
-    apt install -y git python3 python3-pip > /dev/null
-elif command -v apt-get &> /dev/null; then
+if command -v apt-get &> /dev/null; then
     apt-get update > /dev/null
     apt-get install -y git python3 python3-pip > /dev/null
 elif command -v dnf &> /dev/null; then
@@ -57,10 +55,11 @@ pip3 install requests
 read -p "Enter the DNS Full Name(aaa.bbb.ccc): " DNS_FULL_NAME
 
 if [ -z "$DNS_FULL_NAME" ]; then
-    echo "DNS Full Name is empty"
+    print_message "DNS Full Name is empty" "$RED"
     exit 1
 fi
-python ./ladder.py --dns_name $DNS_FULL_NAME
+
+python3 ./ladder.py --dns_name $DNS_FULL_NAME
 
 docker run -it --rm --name certbot \
     -v "/etc/letsencrypt:/etc/letsencrypt" \
