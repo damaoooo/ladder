@@ -12,7 +12,7 @@ services:
     image: nginx
     container_name: nginx
     restart: always
-    network_mode: "service:trojan"
+    network_mode: host
     volumes:
       - ./nginx_config.conf:/etc/nginx/conf.d/nginx_config.conf
       - /etc/letsencrypt:/etc/letsencrypt
