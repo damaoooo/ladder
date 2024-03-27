@@ -82,4 +82,4 @@ docker run -it --rm --name certbot \
     -d "trojan.v4.${DNS_FULL_NAME}"
 
 # Enable trojan and v2ray and nginx in docker-compose.yml
-docker compose up 
+docker compose up -d
