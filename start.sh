@@ -50,10 +50,6 @@ print_message "git python pip 安装完成" "$GREEN"
 
 pip3 install requests
 
-# pull configuration files
-git clone https://github.com/damaoooo/ladder.git
-cd ladder
-
 read -p "Enter the DNS Full Name(aaa.bbb.ccc): " DNS_FULL_NAME
 
 if [ -z "$DNS_FULL_NAME" ]; then
