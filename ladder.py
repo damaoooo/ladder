@@ -76,13 +76,13 @@ class V2rayConfig:
     def update_v2ray_config(self):
         
         inner_port = self.v2ray_config["inbounds"][0]["port"]
-        ws_path = self.v2ray_config["inbounds"][0]["streamSettings"]["path"]
+        ws_path = self.v2ray_config["inbounds"][0]["streamSettings"]["wsSettings"]["path"]
         
         inner_port = input("Input the inner v2ray port(default: {}):".format(inner_port)) or inner_port
         ws_path = input("Input the ws path(default: {}):".format(ws_path)) or ws_path
         
         self.v2ray_config["inbounds"][0]["port"] = inner_port
-        self.v2ray_config["inbounds"][0]["streamSettings"]["path"] = ws_path
+        self.v2ray_config["inbounds"][0]["streamSettings"]["wsSettings"]["path"] = ws_path
         
         self.inner_port = inner_port
         self.ws_path = ws_path
