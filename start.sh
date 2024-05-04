@@ -30,8 +30,7 @@ fi
 
 # docker get 
 docker pull gogost/gost:3.0.0-rc8
-docker pull trojangfw/trojan
-docker pull v2fly/v2fly-core
+docker pull ghcr.io/xtls/xray-core
 docker pull certbot/dns-cloudflare
 docker pull nginx
 
@@ -69,7 +68,7 @@ docker run -it --rm --name certbot \
     --dns-cloudflare \
     --dns-cloudflare-credentials /.token \
     --dns-cloudflare-propagation-seconds 30 \
-    -d "v2ray.v4.${DNS_FULL_NAME}"
+    -d "genshin-v4-${DNS_FULL_NAME}"
 
 docker run -it --rm --name certbot \
     -v "/etc/letsencrypt:/etc/letsencrypt" \
@@ -79,7 +78,7 @@ docker run -it --rm --name certbot \
     --dns-cloudflare \
     --dns-cloudflare-credentials /.token \
     --dns-cloudflare-propagation-seconds 30 \
-    -d "trojan.v4.${DNS_FULL_NAME}"
+    -d "cdn-genshin-v4-${DNS_FULL_NAME}"
 
 # Enable trojan and v2ray and nginx in docker-compose.yml
 docker compose up -d
