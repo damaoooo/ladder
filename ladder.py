@@ -171,14 +171,14 @@ def create_dns_record(password: str, dns_name: str):
     
     if dns_solver.check_dns_exist(xray_dns):
         print_red("XRay DNS already exists, check {}".format(xray_dns))
-        exit(1)
+    else:
+        dns_solver.create_dns_record(xray_dns, ipv4)
+        
         
     if dns_solver.check_dns_exist(cdn_dns):
         print_red("CDN-XRay DNS already exists, check {}".format(cdn_dns))
-        exit(1)
-        
-    dns_solver.create_dns_record(xray_dns, ipv4)
-    dns_solver.create_dns_record(cdn_dns, ipv4, proxied=True)
+    else:
+        dns_solver.create_dns_record(cdn_dns, ipv4, proxied=True)
     
         
     print_green("Create DNS record successfully!")
