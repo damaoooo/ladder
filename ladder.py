@@ -1,6 +1,5 @@
 import json
 import os
-import re
 import requests
 import subprocess
 import argparse
@@ -9,40 +8,48 @@ ENDING = "\033[0m"
 RED = "\033[1;31;0m"
 GREEN = "\033[1;32;0m"
 
+
 def print_red(text):
-    print(RED+text+ENDING)
-    
+    print(RED + text + ENDING)
+
+
 def print_green(text):
-    print(GREEN+text+ENDING)
+    print(GREEN + text + ENDING)
+
 
 def get_cloudflare_token(password):
-    r = requests.post("https://basic-bundle-curly-cherry-0f53.damaoooo.workers.dev/cf_token", json={"password": password})
+    r = requests.post("https://ladderworker.damaoooo.com/cf_token",
+                      json={"password": password})
     if r.status_code == 200:
         return r.json()['token'], r.json()['zone_id']
     else:
         print_red("Get cloudflare token failed!")
         return "", ""
-    
+
+
 def create_dns_file(dns_token: str, file_path: str = "./.dns_token"):
     with open(file_path, "w") as f:
         f.write("dns_cloudflare_api_token = {}".format(dns_token))
         f.close()
-    
+
+
 def get_configs(password):
-    r = requests.post("https://basic-bundle-curly-cherry-0f53.damaoooo.workers.dev/config_file", json={"password": password})
+    r = requests.post("https://ladderworker.damaoooo.com/config_file",
+                      json={"password": password})
     if r.status_code == 200:
         return r.json()['v2'], r.json()['user']
     else:
         print_red("Get configs failed!")
         return "", "", ""
-    
+
+
 def get_cert_abs_path(domain_name: str):
     link_path = f"/etc/letsencrypt/live/{domain_name}"
     key_path = os.path.join(link_path, "privkey.pem")
     fullchain_path = os.path.join(link_path, "fullchain.pem")
     key_path = os.path.realpath(key_path)
     fullchain_path = os.path.realpath(fullchain_path)
-    
+
     return fullchain_path, key_path
 
 
@@ -51,67 +58,65 @@ class XrayConfig:
         self.xray_config = Xray_config
         self.inner_port = 0
         self.ws_path = ""
-        
+
     def update_xray_config(self, xray_name: str, cdn_name: str, user_dict: dict):
-        
         # update the certificate
         xray_cert_file = f"/etc/letsencrypt/live/{xray_name}/fullchain.pem"
         xray_cert_key = f"/etc/letsencrypt/live/{xray_name}/privkey.pem"
-        
+
         cdn_cert_file = f"/etc/letsencrypt/live/{cdn_name}/fullchain.pem"
         cdn_cert_key = f"/etc/letsencrypt/live/{cdn_name}/privkey.pem"
-        
+
         xray_cert_setting = {
-                            "ocspStapling": 3600,
-                            "certificateFile": xray_cert_file,
-                            "keyFile": xray_cert_key
-                        }
+            "ocspStapling": 3600,
+            "certificateFile": xray_cert_file,
+            "keyFile": xray_cert_key
+        }
 
         cdn_cert_setting = {
-                            "ocspStapling": 3600,
-                            "certificateFile": cdn_cert_file,
-                            "keyFile": cdn_cert_key
-                        }
-        
-        
-        self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates'] = [xray_cert_setting, cdn_cert_setting]
-        
+            "ocspStapling": 3600,
+            "certificateFile": cdn_cert_file,
+            "keyFile": cdn_cert_key
+        }
+
+        self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates'] = [xray_cert_setting,
+                                                                                            cdn_cert_setting]
+
         # set the user id
         vision_reality_clients = []
         ws_clients = []
-        
+
         for username in user_dict.keys():
             user_uuid = user_dict[username]
             vision_reality_clients.append({"id": user_uuid, "flow": "xtls-rprx-vision", "email": f"{username}@qq.com"})
             ws_clients.append({'id': user_uuid, "email": f"{username}@qq.com"})
-            
+
         self.xray_config['inbounds'][0]['settings']['clients'] = vision_reality_clients
         self.xray_config['inbounds'][1]['settings']['clients'] = vision_reality_clients
         self.xray_config['inbounds'][2]['settings']['clients'] = ws_clients
-        
-        
+
     def save_xray_config(self, save_path: str):
         with open(save_path, "w") as f:
             content = json.dumps(self.xray_config, indent=4)
             f.write(content)
-            
-    
+
+
 class DNSSolver:
     def __init__(self, zone_id: str, token: str) -> None:
         self.zone_id = zone_id
         self.token = token
-        
+
     def check_dns_exist(self, domain_name):
         url = "https://api.cloudflare.com/client/v4/zones/{}/dns_records".format(self.zone_id)
         header = {'Authorization': 'Bearer ' + self.token}
         params = {"search": domain_name}
 
         r = requests.get(url, headers=header, params=params)
-        
+
         if r.status_code == 400:
             print("Token is invalid!")
             return False
-        
+
         data = r.json()
         if len(data["result"]):
             # Print the record
@@ -126,7 +131,7 @@ class DNSSolver:
             return True
         else:
             return False
-        
+
     def create_dns_record(self, domain_name, ip, record_type="A", proxied=False):
         url = "https://api.cloudflare.com/client/v4/zones/{}/dns_records".format(self.zone_id)
         header = {'Authorization': 'Bearer ' + self.token, 'Content-Type': 'application/json'}
@@ -137,7 +142,7 @@ class DNSSolver:
             "ttl": 1,
             "proxied": proxied
         }
-        
+
         r = requests.post(url, headers=header, json=data)
         assert r.status_code == 200
         ret = r.json()
@@ -146,8 +151,8 @@ class DNSSolver:
         else:
             print("Create DNS Failed", ret)
             return False
-        
-    
+
+
 def get_ipv4():
     p = subprocess.Popen(["curl", "-4", "ip.sb"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
@@ -155,44 +160,40 @@ def get_ipv4():
 
 
 def create_dns_record(password: str, dns_name: str):
-    
     cf_token, zone_id = get_cloudflare_token(password)
-    
+
     if not cf_token:
         print_red("Get cloudflare token failed!")
         return
-    
+
     dns_solver = DNSSolver(zone_id=zone_id, token=cf_token)
-    
+
     xray_dns = "genshin-" + "v4-" + dns_name
     cdn_dns = "cdn-genshin-" + "v4-" + dns_name
-    
+
     ipv4 = get_ipv4()
-    
+
     if dns_solver.check_dns_exist(xray_dns):
         print_red("XRay DNS already exists, check {}".format(xray_dns))
     else:
         dns_solver.create_dns_record(xray_dns, ipv4)
-        
-        
+
     if dns_solver.check_dns_exist(cdn_dns):
         print_red("CDN-XRay DNS already exists, check {}".format(cdn_dns))
     else:
         dns_solver.create_dns_record(cdn_dns, ipv4, proxied=True)
-    
-        
+
     print_green("Create DNS record successfully!")
     return xray_dns, cdn_dns
-    
+
 
 if __name__ == "__main__":
-    
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("--dns_name", type=str, help="The DNS name")
     args = arg_parser.parse_args()
-    
+
     dns_name: str = args.dns_name
-    
+
     password = input("Please input the password:")
 
     xray_name, cdn_name = create_dns_record(password, dns_name)
@@ -202,8 +203,8 @@ if __name__ == "__main__":
     xray_config_manager = XrayConfig(xray_config)
     xray_config_manager.update_xray_config(xray_name, cdn_name, user_dict)
     xray_config_manager.save_xray_config("./vless_config.json")
-    
+
     print_green("Update configs successfully!")
-    
+
     cf_token, _ = get_cloudflare_token(password)
     create_dns_file(cf_token, "./.dns_token")
