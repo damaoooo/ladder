@@ -29,9 +29,15 @@ def restart_docker_compose():
         print_red("docker-compose.yml not exists!")
         return
     else:
-        os.system("docker-compose down")
-        os.system("docker-compose up -d")
-        print_green("Restart docker-compose successfully!")
+        # Check it command "docker-compose" exists
+        if os.system("which docker-compose") != 0:
+            os.system("docker compose down")
+            os.system("docker compose up -d")
+            print_green("Restart docker-compose successfully!")
+        else:
+            os.system("docker-compose down")
+            os.system("docker-compose up -d")
+            print_green("Restart docker-compose successfully!")
 
 
 def update_configs(password: str, dns_name: str):
