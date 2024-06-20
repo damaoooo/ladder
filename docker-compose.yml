@@ -18,3 +18,13 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt
       
     command: ["run", "-c", "/etc/xray/config.json"]
+
+  hysteria2:
+    image: tobyxdd/hysteria
+    container_name: hysteria2
+    restart: always
+    network_mode: "host"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt
+      - ./hy2.yaml:/etc/hysteria.yaml
+    command: ["server", "-c", "/etc/hysteria.yaml"]
