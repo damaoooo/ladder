@@ -4,7 +4,7 @@ import requests
 import subprocess
 import argparse
 import yaml
-from typing import Optional
+from typing import Union
 
 ENDING = "\033[0m"
 RED = "\033[1;31;0m"
@@ -104,7 +104,7 @@ class XrayConfig:
 
 
 class Hy2Config:
-    def __init__(self, hy2_config: Optional[dict, str]):
+    def __init__(self, hy2_config: Union[dict, str]):
         if isinstance(hy2_config, dict):
             self.hy2_config = hy2_config
         else:
