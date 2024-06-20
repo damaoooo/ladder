@@ -32,6 +32,7 @@ fi
 docker pull gogost/gost:3.0.0-rc8
 docker pull ghcr.io/xtls/xray-core
 docker pull certbot/dns-cloudflare
+docker pull tobyxdd/hysteria
 docker pull nginx
 
 if command -v apt-get &> /dev/null; then
@@ -49,7 +50,7 @@ else
 fi
 print_message "git python pip 安装完成" "$GREEN"
 
-pip3 install requests
+pip3 install requests pyyaml
 
 read -p "Enter the DNS Full Name(aaa.bbb.ccc): " DNS_FULL_NAME
 
