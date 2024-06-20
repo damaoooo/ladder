@@ -3,6 +3,8 @@ import os
 import requests
 import subprocess
 import argparse
+import yaml
+from typing import Optional
 
 ENDING = "\033[0m"
 RED = "\033[1;31;0m"
@@ -101,6 +103,35 @@ class XrayConfig:
             f.write(content)
 
 
+class Hy2Config:
+    def __init__(self, hy2_config: Optional[dict, str]):
+        if isinstance(hy2_config, dict):
+            self.hy2_config = hy2_config
+        else:
+            with open(hy2_config, "r") as f:
+                self.hy2_config = yaml.load(f, Loader=yaml.FullLoader)
+
+    def update_hy2_config(self, domain_name: str, user_dict: dict):
+        self.hy2_config['tls']['cert'] = f"/etc/letsencrypt/live/{domain_name}/fullchain.pem"
+        self.hy2_config['tls']['key'] = f"/etc/letsencrypt/live/{domain_name}/privkey.pem"
+
+        self.hy2_config['auth']['userpass'] = user_dict
+
+    def save_hy2_config(self, save_path: str):
+
+        default_nic = get_default_nic()
+        if default_nic:
+            flush_iptables()
+            add_iptables_nat_rule(default_nic, 40000, 41000, 443)
+            print("Default NIC is", default_nic, "Redirect port {}-{} to 443".format(40000, 41000))
+        else:
+            print_red("Get default NIC failed!, Please add NAT rule manually!")
+
+        with open(save_path, "w") as f:
+            content = yaml.dump(self.hy2_config, default_flow_style=False)
+            f.write(content)
+
+
 class DNSSolver:
     def __init__(self, zone_id: str, token: str) -> None:
         self.zone_id = zone_id
@@ -187,6 +218,27 @@ def create_dns_record(password: str, dns_name: str):
     return xray_dns, cdn_dns
 
 
+def get_default_nic():
+    command = "ip route"
+    r = os.popen(command)
+    info = r.readlines()
+    for line in info:
+        if "default" in line:
+            return line.split()[4]
+    else:
+        return None
+
+
+def flush_iptables():
+    command = "iptables -F -t nat"
+    os.system(command)
+
+
+def add_iptables_nat_rule(default_nic, port_start, port_end, redirect_port):
+    command = f"iptables -t nat -A PREROUTING -i {default_nic} -p udp --dport {port_start}:{port_end} -j REDIRECT --to-ports {redirect_port}"
+    os.system(command)
+
+
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("--dns_name", type=str, help="The DNS name")
@@ -203,6 +255,10 @@ if __name__ == "__main__":
     xray_config_manager = XrayConfig(xray_config)
     xray_config_manager.update_xray_config(xray_name, cdn_name, user_dict)
     xray_config_manager.save_xray_config("./vless_config.json")
+
+    hy2_config = Hy2Config("./hy2_config.yaml")
+    hy2_config.update_hy2_config(xray_name, user_dict)
+    hy2_config.save_hy2_config("./hy2_config.yaml")
 
     print_green("Update configs successfully!")
 

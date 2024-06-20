@@ -26,5 +26,5 @@ services:
     network_mode: "host"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt
-      - ./hy2.yaml:/etc/hysteria.yaml
+      - ./hy2_config.yaml:/etc/hysteria.yaml
     command: ["server", "-c", "/etc/hysteria.yaml"]
