@@ -119,14 +119,6 @@ class Hy2Config:
 
     def save_hy2_config(self, save_path: str):
 
-        default_nic = get_default_nic()
-        if default_nic:
-            flush_iptables()
-            add_iptables_nat_rule(default_nic, 40000, 41000, 443)
-            print("Default NIC is", default_nic, "Redirect port {}-{} to 443".format(40000, 41000))
-        else:
-            print_red("Get default NIC failed!, Please add NAT rule manually!")
-
         with open(save_path, "w") as f:
             content = yaml.dump(self.hy2_config, default_flow_style=False)
             f.write(content)
@@ -218,25 +210,43 @@ def create_dns_record(password: str, dns_name: str):
     return xray_dns, cdn_dns
 
 
-def get_default_nic():
-    command = "ip route"
-    r = os.popen(command)
-    info = r.readlines()
-    for line in info:
-        if "default" in line:
-            return line.split()[4]
-    else:
-        return None
+class NICManager:
+    def __init__(self):
+        self.range_start = 40000
+        self.range_end = 41000
+        self.redirect_port = 443
+        self.default_nic = self.get_default_nic()
 
+    def get_default_nic(self):
+        command = "ip route"
+        r = os.popen(command)
+        info = r.readlines()
+        for line in info:
+            if "default" in line:
+                return line.split()[4]
+        else:
+            return None
 
-def flush_iptables():
-    command = "iptables -F -t nat"
-    os.system(command)
+    def flush_iptables(self):
+        command = "iptables -F -t nat"
+        os.system(command)
 
+    def add_iptables_nat_rule(self, default_nic):
+        command = (f"iptables -t nat -A PREROUTING -i {default_nic} -p udp "
+                   f"--dport {self.range_start}:{self.range_end} -j REDIRECT --to-ports {self.redirect_port}")
+        os.system(command)
 
-def add_iptables_nat_rule(default_nic, port_start, port_end, redirect_port):
-    command = f"iptables -t nat -A PREROUTING -i {default_nic} -p udp --dport {port_start}:{port_end} -j REDIRECT --to-ports {redirect_port}"
-    os.system(command)
+    def update_iptables_nat_rule(self):
+
+        if self.default_nic:
+            self.flush_iptables()
+            self.add_iptables_nat_rule(self.default_nic)
+            print_green("Update iptables successfully!, routing nic: {} from {}-{} to {}".format(self.default_nic,
+                                                                                                  self.range_start,
+                                                                                                  self.range_end,
+                                                                                                  self.redirect_port))
+        else:
+            print_red("Get default nic failed!")
 
 
 if __name__ == "__main__":
@@ -259,6 +269,9 @@ if __name__ == "__main__":
     hy2_config = Hy2Config("./hy2_config.yaml")
     hy2_config.update_hy2_config(xray_name, user_dict)
     hy2_config.save_hy2_config("./hy2_config.yaml")
+
+    nic_manager = NICManager()
+    nic_manager.update_iptables_nat_rule()
 
     print_green("Update configs successfully!")
 

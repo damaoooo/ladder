@@ -1,4 +1,4 @@
-from ladder import get_configs, XrayConfig, print_green, print_red, Hy2Config
+from ladder import get_configs, XrayConfig, print_green, print_red, Hy2Config, NICManager
 import argparse
 import os
 import json
@@ -54,6 +54,9 @@ def update_configs(password: str, dns_name: str):
     hy2_config = Hy2Config("./hy2_config.yaml")
     hy2_config.update_hy2_config(xray_name, user_dict)
     hy2_config.save_hy2_config("./hy2_config.yaml")
+
+    nic_manager = NICManager()
+    nic_manager.update_iptables_nat_rule()
 
     print_green("Update configs successfully!")
 
