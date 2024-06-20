@@ -1,4 +1,4 @@
-from ladder import get_configs, XrayConfig, print_green, print_red
+from ladder import get_configs, XrayConfig, print_green, print_red, Hy2Config
 import argparse
 import os
 import json
@@ -50,6 +50,10 @@ def update_configs(password: str, dns_name: str):
 
     xray_config_manager.update_xray_config(xray_name, cdn_name, user_dict)
     xray_config_manager.save_xray_config("./vless_config.json")
+
+    hy2_config = Hy2Config("./hy2_config.yaml")
+    hy2_config.update_hy2_config(xray_name, user_dict)
+    hy2_config.save_hy2_config("./hy2_config.yaml")
 
     print_green("Update configs successfully!")
 
