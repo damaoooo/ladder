@@ -1,0 +1,18 @@
+listen: :443
+
+tls:
+  cert: "certpath"
+  key: "keypath"
+
+auth:
+  type: userpass
+  userpass:
+    testuser1: testpassword1
+
+ignoreClientBandwidth: false
+
+masquerade: 
+  type: proxy
+  proxy:
+    url: https://genshin.hoyoverse.com/
+    rewriteHost: true
