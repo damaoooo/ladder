@@ -56,10 +56,12 @@ def get_cert_abs_path(domain_name: str):
 
 
 class XrayConfig:
-    def __init__(self, Xray_config: dict):
-        self.xray_config = Xray_config
-        self.inner_port = 0
-        self.ws_path = ""
+    def __init__(self, Xray_config: Union[dict, str]):
+        if isinstance(Xray_config, dict):
+            self.xray_config = Xray_config
+        else:
+            with open(Xray_config, "r") as f:
+                self.xray_config = json.load(f)
 
     def update_xray_config(self, xray_name: str, cdn_name: str, user_dict: dict):
         # update the certificate

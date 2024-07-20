@@ -41,9 +41,8 @@ def restart_docker_compose():
 
 
 def update_configs(password: str, dns_name: str):
-    xray_config, user_dict = get_configs(password)
-    xray_config = json.loads(xray_config)
-    xray_config_manager = XrayConfig(xray_config)
+    _, user_dict = get_configs(password)
+    xray_config_manager = XrayConfig("./vless_config.json")
 
     xray_name = "genshin-v4-" + dns_name
     cdn_name = "cdn-genshin-v4-" + dns_name
