@@ -84,4 +84,12 @@ docker run -it --rm --name certbot \
 # Enable trojan and v2ray and nginx in docker-compose.yml
 docker compose up -d
 
+# To renew certificates
+#docker run -it --rm --net=host --name certbot \
+#    -v "/etc/letsencrypt:/etc/letsencrypt" \
+#    -v "/var/lib/letsencrypt:/var/lib/letsencrypt" \
+#    -v "./.dns_token:/.token" \
+#    certbot/dns-cloudflare renew \
+#    --dns-cloudflare-credentials /.token
+
 rm ./.dns_token
