@@ -61,7 +61,7 @@ fi
 
 python3 ./ladder.py --dns_name $DNS_FULL_NAME
 
-docker run -it --rm --name certbot \
+docker run -it --rm --name certbot --net=host \
     -v "/etc/letsencrypt:/etc/letsencrypt" \
     -v "/var/lib/letsencrypt:/var/lib/letsencrypt" \
     -v "./.dns_token:/.token" \
@@ -71,7 +71,7 @@ docker run -it --rm --name certbot \
     --dns-cloudflare-propagation-seconds 30 \
     -d "genshin-v4-${DNS_FULL_NAME}"
 
-docker run -it --rm --name certbot \
+docker run -it --rm --name certbot --net=host \
     -v "/etc/letsencrypt:/etc/letsencrypt" \
     -v "/var/lib/letsencrypt:/var/lib/letsencrypt" \
     -v "./.dns_token:/.token" \
