@@ -83,8 +83,14 @@ class XrayConfig:
             "keyFile": cdn_cert_key
         }
 
-        self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates'] = [xray_cert_setting,
-                                                                                            cdn_cert_setting]
+        if len(self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates']) == 2:
+            self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates'] = [xray_cert_setting, cdn_cert_setting]
+
+        if xray_cert_setting not in self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates']:
+            self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates'].append(xray_cert_setting)
+
+        if cdn_cert_setting not in self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates']:
+            self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates'].append(cdn_cert_setting)
 
         # set the user id
         vision_reality_clients = []
