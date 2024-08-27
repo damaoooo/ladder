@@ -42,7 +42,7 @@ def get_configs(password):
         return r.json()['v2'], r.json()['user']
     else:
         print_red("Get configs failed!")
-        return "", "", ""
+        return "", ""
 
 
 def get_cert_abs_path(domain_name: str):
