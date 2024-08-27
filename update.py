@@ -1,4 +1,4 @@
-from ladder import get_configs, XrayConfig, print_green, print_red, Hy2Config, NICManager
+from ladder import get_configs, XrayConfig, print_green, print_red, Hy2Config, NICManager, get_cloudflare_token, create_dns_file
 import argparse
 import os
 import json
@@ -60,6 +60,41 @@ def update_configs(password: str, dns_name: str):
     print_green("Update configs successfully!")
 
 
+class CertificateUpdate:
+    def __init__(self, password: str, dns_file: str = "./.dns_token"):
+        self.dns_file = dns_file
+        self.password = password
+
+    def check_file_exist(self):
+        return os.path.exists(self.dns_file)
+
+    def update_certificate(self):
+        if not self.check_file_exist():
+            dns_token, _ = get_cloudflare_token(self.password)
+            create_dns_file(dns_token, self.dns_file)
+
+        # Now we assume we have the ./.dns_token file
+        # To renew certificates
+        # docker run -it --rm --net=host --name certbot \
+        #    -v "/etc/letsencrypt:/etc/letsencrypt" \
+        #    -v "/var/lib/letsencrypt:/var/lib/letsencrypt" \
+        #    -v "./.dns_token:/.token" \
+        #    certbot/dns-cloudflare renew \
+        #    --dns-cloudflare-credentials /.token
+        commands = [
+            "docker run -it --rm --net=host --name certbot",
+            "-v '/etc/letsencrypt:/etc/letsencrypt'",
+            "-v '/var/lib/letsencrypt:/var/lib/letsencrypt'",
+            f"-v '{self.dns_file}:/.token'",
+            "certbot/dns-cloudflare renew",
+            "--dns-cloudflare-credentials /.token"
+        ]
+        os.system(" ".join(commands))
+
+        # Remove the file
+        os.remove(self.dns_file)
+
+
 if __name__ == "__main__":
     args = get_args()
     password = args.password
@@ -70,6 +105,8 @@ if __name__ == "__main__":
         exit(1)
 
     update_configs(password, dns_name)
+    certificate_manager = CertificateUpdate(password)
+    certificate_manager.update_certificate()
     restart_docker_compose()
 
     print_green("All done!")
