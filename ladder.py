@@ -35,6 +35,16 @@ def create_dns_file(dns_token: str, file_path: str = "./.dns_token"):
         f.close()
 
 
+def get_pubkey(password):
+    r = requests.post("https://ladderworker.damaoooo.com/pubkey",
+                      json={"password": password})
+    if r.status_code == 200:
+        return r.json()
+    else:
+        print_red("Get pubkeys failed!")
+        return {}
+
+
 def get_configs(password):
     r = requests.post("https://ladderworker.damaoooo.com/config_file",
                       json={"password": password})
@@ -53,6 +63,24 @@ def get_cert_abs_path(domain_name: str):
     fullchain_path = os.path.realpath(fullchain_path)
 
     return fullchain_path, key_path
+
+
+class PubKeyManager:
+    def __init__(self, dict_pubkey: dict, ssh_file_path: str = "/root/.ssh/authorized_keys"):
+        self.pubkey = dict_pubkey
+        self.ssh_file_path = ssh_file_path
+
+    def check_authentication_file(self):
+        if not os.path.exists(self.ssh_file_path):
+            ssh_folder = os.path.dirname(self.ssh_file_path)
+            # Run "yes y | ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -q -N """
+            os.system("yes y | ssh-keygen -t rsa -b 4096 -f {} -q -N \"\"".format(os.path.join(ssh_folder, "id_rsa")))
+
+    def update_authentication_file(self):
+        with open(self.ssh_file_path, "a") as f:
+            for username in self.pubkey.keys():
+                f.write(f"{self.pubkey[username]}")
+                f.write("\n")
 
 
 class XrayConfig:
