@@ -37,13 +37,13 @@ docker pull nginx
 
 if command -v apt-get &> /dev/null; then
     apt-get update > /dev/null
-    apt-get install -y git python3 python3-pip > /dev/null
+    apt-get install -y git python3 python3-pip iptables-persistent > /dev/null
 elif command -v dnf &> /dev/null; then
-    dnf install -y git python3 python3-pip > /dev/null
+    dnf install -y git python3 python3-pip iptables-persistent > /dev/null
 elif command -v yum &> /dev/null; then
-    yum install -y git python3 python3-pip > /dev/null
+    yum install -y git python3 python3-pip iptables-persistent > /dev/null
 elif command -v pacman &> /dev/null; then
-    pacman -Syu --noconfirm git python3 python3-pip > /dev/null
+    pacman -Syu --noconfirm git python3 python3-pip iptables-persistent > /dev/null
 else
     print_message "无法确定操作系统的包管理器，请手动安装" "$RED"
     exit 1

@@ -306,6 +306,10 @@ class NICManager:
         else:
             print_red("Get default nic failed!")
 
+    def save_iptables_nat_rule(self):
+        command = "netfilter-persistent save"
+        os.system(command)
+
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
@@ -331,6 +335,7 @@ if __name__ == "__main__":
     print_green("add iptables nat rule")
     nic_manager = NICManager()
     nic_manager.update_iptables_nat_rule()
+    nic_manager.save_iptables_nat_rule()
 
     print_green("adding ssh key files")
     pubkey_dict = get_pubkey(password)

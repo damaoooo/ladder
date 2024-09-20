@@ -56,6 +56,7 @@ def update_configs(password: str, dns_name: str):
 
     nic_manager = NICManager()
     nic_manager.update_iptables_nat_rule()
+    nic_manager.save_iptables_nat_rule()
 
     print_green("Update configs successfully!")
 
