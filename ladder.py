@@ -1,3 +1,4 @@
+import copy
 import json
 import os
 import requests
@@ -73,14 +74,35 @@ class PubKeyManager:
     def check_authentication_file(self):
         if not os.path.exists(self.ssh_file_path):
             ssh_folder = os.path.dirname(self.ssh_file_path)
+
+            if not os.path.exists(ssh_folder):
+                os.makedirs(ssh_folder)
+
             # Run "yes y | ssh-keygen -t rsa -b 4096 -f ~/.ssh/id_rsa -q -N """
             os.system("yes y | ssh-keygen -t rsa -b 4096 -f {} -q -N \"\"".format(os.path.join(ssh_folder, "id_rsa")))
 
+        if not os.path.exists(self.ssh_file_path):
+            # Create the file
+            with open(self.ssh_file_path, "w") as f:
+                f.write("")
+                f.close()
+
     def update_authentication_file(self):
-        with open(self.ssh_file_path, "a") as f:
-            for username in self.pubkey.keys():
-                f.write(f"{self.pubkey[username]}")
-                f.write("\n")
+
+        self.check_authentication_file()
+
+        with open(self.ssh_file_path, "r") as f:
+            all_file = f.read()
+            f.close()
+
+        new_file = copy.deepcopy(all_file)
+        for username in self.pubkey.keys():
+            if self.pubkey[username] not in all_file:
+                new_file += "\n" + self.pubkey[username] + "\n"
+
+        with open(self.ssh_file_path, "w") as f:
+            f.write(new_file)
+            f.close()
 
 
 class XrayConfig:
@@ -306,8 +328,14 @@ if __name__ == "__main__":
     hy2_config.update_hy2_config(xray_name, user_dict)
     hy2_config.save_hy2_config("./hy2_config.yaml")
 
+    print_green("add iptables nat rule")
     nic_manager = NICManager()
     nic_manager.update_iptables_nat_rule()
+
+    print_green("adding ssh key files")
+    pubkey_dict = get_pubkey(password)
+    pubkey_manager = PubKeyManager(pubkey_dict)
+    pubkey_manager.update_authentication_file()
 
     print_green("Update configs successfully!")
 
