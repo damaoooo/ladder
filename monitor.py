@@ -78,7 +78,7 @@ async def validate_password(request: Request):
     try:
         data = await request.json()
         password_model = PasswordModel(**data)
-        if password_model.password != os.getenv["STAT_PASSWORD"]:
+        if password_model.password != os.getenv("STAT_PASSWORD"):
             raise HTTPException(status_code=401, detail="Unauthorized: Invalid password")
         return data
     except json.JSONDecodeError:
