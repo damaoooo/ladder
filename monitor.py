@@ -47,10 +47,10 @@ async def run_xray_statsquery():
 
 async def fetch_hy2_traffic():
     url = "http://127.0.0.1:8899/traffic"
-
+    header = {"Authorization": "some_secret"}
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
+            async with session.get(url, headers=header) as response:
                 if response.status == 200:
                     text = await response.text()
                     try:
