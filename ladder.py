@@ -44,6 +44,15 @@ def get_pubkey(password):
     else:
         print_red("Get pubkeys failed!")
         return {}
+    
+def get_stats_token(password):
+    r = requests.post("https://ladderworker.damaoooo.com/stats_token",
+                      json={"password": password})
+    if r.status_code == 200:
+        return r.json()['token']
+    else:
+        print_red("Get stats token failed!")
+        return ""
 
 
 def get_configs(password):
@@ -234,6 +243,40 @@ class DNSSolver:
             return False
 
 
+class EnvManager:
+    def __init__(self):
+        self.env_file = "./.env"
+
+    def check_env_file(self):
+        if not os.path.exists(self.env_file):
+            with open(self.env_file, "w") as f:
+                f.write("")
+                f.close()
+
+    def write_stat_password(self, password: str):
+        self.check_env_file()
+
+        with open(self.env_file, "r") as f:
+            all_file = f.read()
+            f.close()
+
+        new_file = copy.deepcopy(all_file)
+        if "STAT_PASSWORD" not in all_file:
+            new_file += f"\nSTAT_PASSWORD={password}\n"
+        else:
+            # Find and replace the entire line containing STAT_PASSWORD
+            lines = new_file.split('\n')
+            for i, line in enumerate(lines):
+                if line.startswith('STAT_PASSWORD='):
+                    lines[i] = f"STAT_PASSWORD={password}"
+            new_file = '\n'.join(lines)
+
+        with open(self.env_file, "w") as f:
+            f.write(new_file)
+
+    def update_env_file(self, stats_token: str):
+        self.write_stat_password(stats_token)
+
 def get_ipv4():
     p = subprocess.Popen(["curl", "-4", "ip.sb"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = p.communicate()
@@ -342,7 +385,15 @@ if __name__ == "__main__":
     pubkey_manager = PubKeyManager(pubkey_dict)
     pubkey_manager.update_authentication_file()
 
+    print_green("adding .env file")
+    stats_token = get_stats_token(password)
+    env_manager = EnvManager()
+    env_manager.update_env_file(stats_token)
+
     print_green("Update configs successfully!")
 
     cf_token, _ = get_cloudflare_token(password)
     create_dns_file(cf_token, "./.dns_token")
+    
+    print_green("DNS file created successfully!")
+    print_green("All done!")

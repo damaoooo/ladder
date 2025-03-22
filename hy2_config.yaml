@@ -9,6 +9,10 @@ auth:
   userpass:
     testuser1: testpassword1
 
+trafficStats:
+  listen: 127.0.0.1:8899
+  secret: some_secret
+
 ignoreClientBandwidth: false
 
 quic:

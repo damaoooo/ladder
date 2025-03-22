@@ -1,4 +1,4 @@
-from ladder import get_configs, XrayConfig, print_green, print_red, Hy2Config, NICManager, get_cloudflare_token, create_dns_file
+from ladder import get_configs, XrayConfig, print_green, print_red, Hy2Config, NICManager, get_cloudflare_token, create_dns_file, get_stats_token, EnvManager
 import argparse
 import os
 import json
@@ -66,13 +66,13 @@ class CertificateUpdate:
         self.dns_file = dns_file
         self.password = password
 
-    def check_file_exist(self):
-        return os.path.exists(self.dns_file)
+    def check_file_exist(self, file_name):
+        return os.path.exists(file_name)
 
     def update_certificate(self):
-        if not self.check_file_exist():
-            dns_token, _ = get_cloudflare_token(self.password)
-            create_dns_file(dns_token, self.dns_file)
+
+        dns_token, _ = get_cloudflare_token(self.password)
+        create_dns_file(dns_token, self.dns_file)
 
         # Now we assume we have the ./.dns_token file
         # To renew certificates
@@ -109,5 +109,9 @@ if __name__ == "__main__":
     certificate_manager = CertificateUpdate(password)
     certificate_manager.update_certificate()
     restart_docker_compose()
+
+    get_stats_token(password)
+    env_manager = EnvManager()
+    env_manager.update_env_file(password)
 
     print_green("All done!")
