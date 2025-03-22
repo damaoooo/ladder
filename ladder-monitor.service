@@ -1,0 +1,14 @@
+[Unit]
+Description=Ladder Monitor Python Service
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/ladder
+ExecStart=/usr/bin/python3 /root/ladder/monitor.py
+EnvironmentFile=/root/ladder/.env
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

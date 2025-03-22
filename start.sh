@@ -93,3 +93,8 @@ docker compose up -d
 #    --dns-cloudflare-credentials /.token
 
 rm ./.dns_token
+
+# Monitor Sevice
+cp ./ladder-monitor.service /etc/systemd/system/
+systemctl enable ladder-monitor
+systemctl start ladder-monitor
