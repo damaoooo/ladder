@@ -50,7 +50,7 @@ else
 fi
 print_message "git python pip 安装完成" "$GREEN"
 
-pip3 install -r ./requirements.txt
+pip3 install -r ./requirements.txt --break-system-packages
 
 read -p "Enter the DNS Full Name(aaa.bbb.ccc): " DNS_FULL_NAME
 
