@@ -3,3 +3,4 @@ uvicorn
 aiohttp
 requests
 pyyaml
+python-dotenv

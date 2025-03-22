@@ -5,18 +5,10 @@ from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.responses import JSONResponse
 import uvicorn
 from pydantic import BaseModel
+from dotenv import load_dotenv
+import os
 
-
-def read_env():
-    with open(".env", "r") as f:
-        lines = f.readlines()
-        env = {}
-        for line in lines:
-            key, value = line.strip().split("=")
-            env[key] = value
-        return env
-    
-env = read_env()
+load_dotenv("/root/ladder/.env")
 
 async def run_xray_statsquery():
     command = [
@@ -86,7 +78,7 @@ async def validate_password(request: Request):
     try:
         data = await request.json()
         password_model = PasswordModel(**data)
-        if password_model.password != env["STAT_PASSWORD"]:
+        if password_model.password != os.getenv["STAT_PASSWORD"]:
             raise HTTPException(status_code=401, detail="Unauthorized: Invalid password")
         return data
     except json.JSONDecodeError:
