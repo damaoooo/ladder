@@ -50,7 +50,22 @@ else
 fi
 print_message "git python pip 安装完成" "$GREEN"
 
-pip3 install -r ./requirements.txt --break-system-packages
+if [ -f /etc/os-release ]; then
+    . /etc/os-release
+    if [ "$ID" = "ubuntu" ]; then
+        pip3 install -r ./requirements.txt
+    elif [ "$ID" = "debian" ]; then
+        pip3 install -r ./requirements.txt --break-system-packages
+    else
+        echo "This is another distribution: $ID"
+        pip3 install -r ./requirements.txt
+    fi
+else
+    echo "/etc/os-release file not found."
+    pip3 install -r ./requirements.txt
+fi
+
+
 
 read -p "Enter the DNS Full Name(aaa.bbb.ccc): " DNS_FULL_NAME
 
