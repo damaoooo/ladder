@@ -23,6 +23,14 @@ def is_root():
     return os.geteuid() == 0
 
 
+def update_systemctl():
+    # cp ./ladder-monitor.service to /etc/systemd/system/
+    os.system("cp ./ladder-monitor.service /etc/systemd/system/")
+    os.system("systemctl daemon-reload")
+    os.system("systemctl restart ladder-monitor")
+    print_green("Update systemctl successfully!")
+    return
+
 def restart_docker_compose():
     # check file "docker-compose.yml" exists
     if not os.path.exists("./docker-compose.yml"):
@@ -113,5 +121,7 @@ if __name__ == "__main__":
     get_stats_token(password)
     env_manager = EnvManager()
     env_manager.update_env_file(password)
+
+    update_systemctl()
 
     print_green("All done!")
