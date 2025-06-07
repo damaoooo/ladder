@@ -7,7 +7,12 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf
       - /etc/letsencrypt:/etc/letsencrypt
-      
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   v2ray:
     image: ghcr.io/xtls/xray-core
     container_name: xray
@@ -16,7 +21,11 @@ services:
     volumes:
       - ./vless_config.json:/etc/xray/config.json
       - /etc/letsencrypt:/etc/letsencrypt
-      
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
     command: ["run", "-c", "/etc/xray/config.json"]
 
   hysteria2:
@@ -28,3 +37,8 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt
       - ./hy2_config.yaml:/etc/hysteria.yaml
     command: ["server", "-c", "/etc/hysteria.yaml"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
