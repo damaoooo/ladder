@@ -18,6 +18,7 @@ services:
     container_name: xray
     network_mode: host
     restart: always
+    user: "root"
     volumes:
       - ./vless_config.json:/etc/xray/config.json
       - /etc/letsencrypt:/etc/letsencrypt
