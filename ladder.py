@@ -162,15 +162,12 @@ class XrayConfig:
             if not isinstance(settings, dict):
                 continue
 
-            template_client = settings.pop('clientTemplate', None)
             clients = settings.get('clients')
 
-            if template_client is None:
-                if not isinstance(clients, list) or not clients:
-                    continue
-                template_client = clients[0]
+            if not isinstance(clients, list) or not clients:
+                continue
 
-            settings['clients'] = self.build_clients(user_dict, template_client)
+            settings['clients'] = self.build_clients(user_dict, clients[0])
 
     def save_xray_config(self, save_path: str):
         with open(save_path, "w") as f:
