@@ -3,6 +3,7 @@ import argparse
 import os
 import json
 import getpass
+import shlex
 
 
 def get_args():
@@ -85,39 +86,44 @@ def update_configs(password: str, dns_name: str):
 
 
 class CertificateUpdate:
-    def __init__(self, password: str, dns_file: str = "./.dns_token"):
+    def __init__(self, password: str, dns_name: str, dns_file: str = "./.dns_token"):
         self.dns_file = dns_file
         self.password = password
+        self.dns_name = dns_name
 
     def check_file_exist(self, file_name):
         return os.path.exists(file_name)
+
+    def renewal_cert_names(self):
+        return [
+            f"genshin-v4-{self.dns_name}",
+            f"cdn-genshin-v4-{self.dns_name}",
+        ]
 
     def update_certificate(self):
 
         dns_token, _ = get_cloudflare_token(self.password)
         create_dns_file(dns_token, self.dns_file)
 
-        # Now we assume we have the ./.dns_token file
-        # To renew certificates
-        # docker run -it --rm --net=host --name certbot \
-        #    -v "/etc/letsencrypt:/etc/letsencrypt" \
-        #    -v "/var/lib/letsencrypt:/var/lib/letsencrypt" \
-        #    -v "./.dns_token:/.token" \
-        #    certbot/dns-cloudflare renew \
-        #    --dns-cloudflare-credentials /.token
-        commands = [
-            "docker run --rm --net=host --name certbot",
-            "-v '/etc/letsencrypt:/etc/letsencrypt'",
-            "-v '/var/lib/letsencrypt:/var/lib/letsencrypt'",
-            f"-v '{self.dns_file}:/.token'",
-            "certbot/dns-cloudflare renew",
-            "--non-interactive",
-            "--dns-cloudflare-credentials /.token"
-        ]
-        os.system(" ".join(commands))
-
-        # Remove the file
-        os.remove(self.dns_file)
+        try:
+            for cert_name in self.renewal_cert_names():
+                commands = [
+                    "docker run --rm --net=host --name certbot",
+                    "-v '/etc/letsencrypt:/etc/letsencrypt'",
+                    "-v '/var/lib/letsencrypt:/var/lib/letsencrypt'",
+                    f"-v {shlex.quote(self.dns_file)}:/.token",
+                    "certbot/dns-cloudflare renew",
+                    "--non-interactive",
+                    "--no-random-sleep-on-renew",
+                    f"--cert-name {shlex.quote(cert_name)}",
+                    "--dns-cloudflare-credentials /.token"
+                ]
+                result = os.system(" ".join(commands))
+                if result != 0:
+                    print_red(f"Renew certificate {cert_name} failed!")
+        finally:
+            if os.path.exists(self.dns_file):
+                os.remove(self.dns_file)
 
 
 if __name__ == "__main__":
@@ -130,7 +136,7 @@ if __name__ == "__main__":
         exit(1)
 
     update_configs(password, dns_name)
-    certificate_manager = CertificateUpdate(password)
+    certificate_manager = CertificateUpdate(password, dns_name)
     certificate_manager.update_certificate()
     restart_docker_compose()
 
