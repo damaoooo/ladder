@@ -2,3 +2,11 @@
 .dns_token
 
 test.*
+*.json
+
+nginx.generated.conf
+*.generated.yaml
+
+*.yml
+!docker-compose.yml
+privkey

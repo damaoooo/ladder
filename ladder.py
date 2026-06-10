@@ -4,6 +4,8 @@ import os
 import requests
 import subprocess
 import argparse
+import shutil
+import getpass
 import yaml
 from typing import Union
 
@@ -33,7 +35,7 @@ def get_cloudflare_token(password):
 def create_dns_file(dns_token: str, file_path: str = "./.dns_token"):
     with open(file_path, "w") as f:
         f.write("dns_cloudflare_api_token = {}".format(dns_token))
-        f.close()
+    os.chmod(file_path, 0o600)
 
 
 def get_pubkey(password):
@@ -122,52 +124,93 @@ class XrayConfig:
             with open(Xray_config, "r") as f:
                 self.xray_config = json.load(f)
 
-    def update_xray_config(self, xray_name: str, cdn_name: str, user_dict: dict):
-        # update the certificate
-        xray_cert_file = f"/etc/letsencrypt/live/{xray_name}/fullchain.pem"
-        xray_cert_key = f"/etc/letsencrypt/live/{xray_name}/privkey.pem"
-
-        cdn_cert_file = f"/etc/letsencrypt/live/{cdn_name}/fullchain.pem"
-        cdn_cert_key = f"/etc/letsencrypt/live/{cdn_name}/privkey.pem"
-
-        xray_cert_setting = {
-            "ocspStapling": 3600,
-            "certificateFile": xray_cert_file,
-            "keyFile": xray_cert_key
-        }
-
-        cdn_cert_setting = {
-            "ocspStapling": 3600,
-            "certificateFile": cdn_cert_file,
-            "keyFile": cdn_cert_key
-        }
-
-        if len(self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates']) == 2:
-            self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates'] = [xray_cert_setting, cdn_cert_setting]
-
-        if xray_cert_setting not in self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates']:
-            self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates'].append(xray_cert_setting)
-
-        if cdn_cert_setting not in self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates']:
-            self.xray_config['inbounds'][0]['streamSettings']['tlsSettings']['certificates'].append(cdn_cert_setting)
-
-        # set the user id
-        vision_reality_clients = []
-        ws_clients = []
-
+    @staticmethod
+    def build_clients(user_dict: dict, template_client: dict):
+        clients = []
         for username in user_dict.keys():
             user_uuid = user_dict[username]
-            vision_reality_clients.append({"id": user_uuid, "flow": "xtls-rprx-vision", "email": f"{username}@qq.com"})
-            ws_clients.append({'id': user_uuid, "email": f"{username}@qq.com"})
+            client = copy.deepcopy(template_client)
+            client['id'] = user_uuid
+            client['email'] = f"{username}@qq.com"
+            clients.append(client)
+        return clients
 
-        self.xray_config['inbounds'][0]['settings']['clients'] = vision_reality_clients
-        self.xray_config['inbounds'][1]['settings']['clients'] = vision_reality_clients
-        self.xray_config['inbounds'][2]['settings']['clients'] = ws_clients
+    @staticmethod
+    def format_template_value(value, variables: dict):
+        if isinstance(value, str):
+            rendered = value
+            for key, item in variables.items():
+                rendered = rendered.replace('{' + key + '}', item)
+            return rendered
+        if isinstance(value, list):
+            return [XrayConfig.format_template_value(item, variables) for item in value]
+        if isinstance(value, dict):
+            return {key: XrayConfig.format_template_value(item, variables) for key, item in value.items()}
+        return value
+
+    def update_xray_config(self, xray_name: str, cdn_name: str, user_dict: dict):
+        variables = {
+            'xray_name': xray_name,
+            'cdn_name': cdn_name,
+        }
+        self.xray_config = self.format_template_value(self.xray_config, variables)
+        self.update_clients(user_dict)
+
+    def update_clients(self, user_dict: dict):
+        for inbound in self.xray_config.get('inbounds', []):
+            settings = inbound.get('settings')
+            if not isinstance(settings, dict):
+                continue
+
+            template_client = settings.pop('clientTemplate', None)
+            clients = settings.get('clients')
+
+            if template_client is None:
+                if not isinstance(clients, list) or not clients:
+                    continue
+                template_client = clients[0]
+
+            settings['clients'] = self.build_clients(user_dict, template_client)
 
     def save_xray_config(self, save_path: str):
         with open(save_path, "w") as f:
             content = json.dumps(self.xray_config, indent=4)
             f.write(content)
+
+    def get_inner_xhttp_port(self):
+        for inbound in self.xray_config.get('inbounds', []):
+            if inbound.get('tag') == 'inner-xhttp':
+                return inbound['port']
+
+        for inbound in self.xray_config.get('inbounds', []):
+            stream_settings = inbound.get('streamSettings', {})
+            if (
+                inbound.get('listen') in ('127.0.0.1', 'localhost')
+                and stream_settings.get('network') == 'xhttp'
+                and stream_settings.get('security', 'none') == 'none'
+            ):
+                return inbound['port']
+
+        raise ValueError("inner-xhttp inbound port not found")
+
+
+class NginxConfig:
+    def __init__(self, template_path: str = "./nginx.conf"):
+        with open(template_path, "r") as f:
+            self.nginx_config = f.read()
+
+    def update_nginx_config(self, xray_name: str, cdn_name: str, xhttp_port: Union[int, str]):
+        replacements = {
+            "__XRAY_NAME__": xray_name,
+            "__CDN_NAME__": cdn_name,
+            "__XHTTP_PORT__": str(xhttp_port),
+        }
+        for old, new in replacements.items():
+            self.nginx_config = self.nginx_config.replace(old, new)
+
+    def save_nginx_config(self, save_path: str):
+        with open(save_path, "w") as f:
+            f.write(self.nginx_config)
 
 
 class Hy2Config:
@@ -317,6 +360,8 @@ class NICManager:
         self.range_end = 41000
         self.redirect_port = 443
         self.default_nic = self.get_default_nic()
+        self.table = "nat"
+        self.chain = "PREROUTING"
 
     def get_default_nic(self):
         command = "ip route"
@@ -328,30 +373,57 @@ class NICManager:
         else:
             return None
 
-    def flush_iptables(self):
-        command = "iptables -F -t nat"
-        os.system(command)
+    def get_redirect_rule(self, default_nic):
+        return [
+            "-i", default_nic,
+            "-p", "udp",
+            "--dport", f"{self.range_start}:{self.range_end}",
+            "-j", "REDIRECT",
+            "--to-ports", str(self.redirect_port),
+        ]
+
+    def iptables_rule_exists(self, default_nic):
+        command = [
+            "iptables",
+            "-t", self.table,
+            "-C", self.chain,
+            *self.get_redirect_rule(default_nic),
+        ]
+        result = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return result.returncode == 0
 
     def add_iptables_nat_rule(self, default_nic):
-        command = (f"iptables -t nat -A PREROUTING -i {default_nic} -p udp "
-                   f"--dport {self.range_start}:{self.range_end} -j REDIRECT --to-ports {self.redirect_port}")
-        os.system(command)
+        command = [
+            "iptables",
+            "-t", self.table,
+            "-A", self.chain,
+            *self.get_redirect_rule(default_nic),
+        ]
+        subprocess.run(command, check=True)
 
     def update_iptables_nat_rule(self):
 
         if self.default_nic:
-            self.flush_iptables()
-            self.add_iptables_nat_rule(self.default_nic)
-            print_green("Update iptables successfully!, routing nic: {} from {}-{} to {}".format(self.default_nic,
-                                                                                                  self.range_start,
-                                                                                                  self.range_end,
-                                                                                                  self.redirect_port))
+            if self.iptables_rule_exists(self.default_nic):
+                print_green("Iptables rule already exists, routing nic: {} from {}-{} to {}".format(self.default_nic,
+                                                                                                     self.range_start,
+                                                                                                     self.range_end,
+                                                                                                     self.redirect_port))
+            else:
+                self.add_iptables_nat_rule(self.default_nic)
+                print_green("Add iptables rule successfully!, routing nic: {} from {}-{} to {}".format(self.default_nic,
+                                                                                                        self.range_start,
+                                                                                                        self.range_end,
+                                                                                                        self.redirect_port))
         else:
             print_red("Get default nic failed!")
 
     def save_iptables_nat_rule(self):
-        command = "netfilter-persistent save"
-        os.system(command)
+        command = shutil.which("netfilter-persistent")
+        if command:
+            subprocess.run([command, "save"], check=False)
+        else:
+            print_red("netfilter-persistent not found, iptables rule is active but not persisted")
 
 
 if __name__ == "__main__":
@@ -361,19 +433,23 @@ if __name__ == "__main__":
 
     dns_name: str = args.dns_name
 
-    password = input("Please input the password:")
+    password = getpass.getpass("Please input the password:")
 
     xray_name, cdn_name = create_dns_record(password, dns_name)
 
-    xray_config, user_dict = get_configs(password)
-    xray_config = json.loads(xray_config)
-    xray_config_manager = XrayConfig(xray_config)
+    xray_template, user_dict = get_configs(password)
+    xray_template = json.loads(xray_template)
+    xray_config_manager = XrayConfig(xray_template)
     xray_config_manager.update_xray_config(xray_name, cdn_name, user_dict)
     xray_config_manager.save_xray_config("./vless_config.json")
 
+    nginx_config = NginxConfig("./nginx.conf")
+    nginx_config.update_nginx_config(xray_name, cdn_name, xray_config_manager.get_inner_xhttp_port())
+    nginx_config.save_nginx_config("./nginx.generated.conf")
+
     hy2_config = Hy2Config("./hy2_config.yaml")
     hy2_config.update_hy2_config(xray_name, user_dict)
-    hy2_config.save_hy2_config("./hy2_config.yaml")
+    hy2_config.save_hy2_config("./hy2_config.generated.yaml")
 
     print_green("add iptables nat rule")
     nic_manager = NICManager()

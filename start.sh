@@ -5,12 +5,17 @@ RED="\e[31m"           # 红色
 GREEN="\e[32m"         # 绿色
 YELLOW="\e[33m"        # 黄色
 RESET="\e[0m"          # 重置颜色
+export DEBIAN_FRONTEND=noninteractive
 
 # 添加函数以显示不同颜色的消息
 print_message() {
     local message="$1"
     local color="$2"
     echo -e "${color}${message}${RESET}"
+}
+
+apt_get() {
+    apt-get -o DPkg::Lock::Timeout=600 "$@"
 }
 
 if [ `whoami` != "root" ];then
@@ -36,8 +41,8 @@ docker pull tobyxdd/hysteria
 docker pull nginx
 
 if command -v apt-get &> /dev/null; then
-    apt-get update > /dev/null
-    apt-get install -y git python3 python3-pip iptables-persistent > /dev/null
+    apt_get update > /dev/null
+    apt_get install -y git python3 python3-pip iptables-persistent > /dev/null
 elif command -v dnf &> /dev/null; then
     dnf install -y git python3 python3-pip iptables-persistent > /dev/null
 elif command -v yum &> /dev/null; then
@@ -50,24 +55,7 @@ else
 fi
 print_message "git python pip 安装完成" "$GREEN"
 
-if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    if [ "$ID" = "ubuntu" ]; then
-        if [ "$VERSION_ID" = "24.04" ]; then
-            pip3 install -r ./requirements.txt --break-system-packages
-        else
-            pip3 install -r ./requirements.txt
-        fi
-    elif [ "$ID" = "debian" ]; then
-        pip3 install -r ./requirements.txt --break-system-packages
-    else
-        echo "This is another distribution: $ID"
-        pip3 install -r ./requirements.txt
-    fi
-else
-    echo "/etc/os-release file not found."
-    pip3 install -r ./requirements.txt
-fi
+PIP_BREAK_SYSTEM_PACKAGES=1 pip3 install -r ./requirements.txt
 
 
 
@@ -78,23 +66,29 @@ if [ -z "$DNS_FULL_NAME" ]; then
     exit 1
 fi
 
-python3 ./ladder.py --dns_name $DNS_FULL_NAME
+python3 ./ladder.py --dns_name "$DNS_FULL_NAME"
 
-docker run -it --rm --name certbot --net=host \
+docker run --rm --name certbot --net=host \
     -v "/etc/letsencrypt:/etc/letsencrypt" \
     -v "/var/lib/letsencrypt:/var/lib/letsencrypt" \
     -v "./.dns_token:/.token" \
     certbot/dns-cloudflare certonly \
+    --non-interactive \
+    --agree-tos \
+    --register-unsafely-without-email \
     --dns-cloudflare \
     --dns-cloudflare-credentials /.token \
     --dns-cloudflare-propagation-seconds 30 \
     -d "genshin-v4-${DNS_FULL_NAME}"
 
-docker run -it --rm --name certbot --net=host \
+docker run --rm --name certbot --net=host \
     -v "/etc/letsencrypt:/etc/letsencrypt" \
     -v "/var/lib/letsencrypt:/var/lib/letsencrypt" \
     -v "./.dns_token:/.token" \
     certbot/dns-cloudflare certonly \
+    --non-interactive \
+    --agree-tos \
+    --register-unsafely-without-email \
     --dns-cloudflare \
     --dns-cloudflare-credentials /.token \
     --dns-cloudflare-propagation-seconds 30 \

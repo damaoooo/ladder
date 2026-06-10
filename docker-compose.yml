@@ -5,7 +5,7 @@ services:
     restart: always
     network_mode: host
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx.generated.conf:/etc/nginx/nginx.conf
       - /etc/letsencrypt:/etc/letsencrypt
     logging:
       driver: "json-file"
@@ -36,7 +36,7 @@ services:
     network_mode: "host"
     volumes:
       - /etc/letsencrypt:/etc/letsencrypt
-      - ./hy2_config.yaml:/etc/hysteria.yaml
+      - ./hy2_config.generated.yaml:/etc/hysteria.yaml
     command: ["server", "-c", "/etc/hysteria.yaml"]
     logging:
       driver: "json-file"

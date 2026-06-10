@@ -1,7 +1,8 @@
-from ladder import get_configs, XrayConfig, print_green, print_red, Hy2Config, NICManager, get_cloudflare_token, create_dns_file, get_stats_token, EnvManager
+from ladder import get_configs, XrayConfig, print_green, print_red, Hy2Config, NICManager, get_cloudflare_token, create_dns_file, get_stats_token, EnvManager, NginxConfig
 import argparse
 import os
 import json
+import getpass
 
 
 def get_args():
@@ -16,6 +17,16 @@ def get_args():
     arg_parser.add_argument("-p", "--password", type=str, help="The password")
     arg_parser.add_argument("-d", "--dns_name", type=str, help="The DNS name")
     args = arg_parser.parse_args()
+    return args
+
+
+def read_missing_args(args):
+    if not args.dns_name:
+        args.dns_name = input("Enter the DNS Full Name(aaa.bbb.ccc): ")
+
+    if not args.password:
+        args.password = getpass.getpass("Please input the password:")
+
     return args
 
 
@@ -49,8 +60,8 @@ def restart_docker_compose():
 
 
 def update_configs(password: str, dns_name: str):
-    _, user_dict = get_configs(password)
-    xray_config_manager = XrayConfig("./vless_config.json")
+    xray_template, user_dict = get_configs(password)
+    xray_config_manager = XrayConfig(json.loads(xray_template))
 
     xray_name = "genshin-v4-" + dns_name
     cdn_name = "cdn-genshin-v4-" + dns_name
@@ -58,9 +69,13 @@ def update_configs(password: str, dns_name: str):
     xray_config_manager.update_xray_config(xray_name, cdn_name, user_dict)
     xray_config_manager.save_xray_config("./vless_config.json")
 
+    nginx_config = NginxConfig("./nginx.conf")
+    nginx_config.update_nginx_config(xray_name, cdn_name, xray_config_manager.get_inner_xhttp_port())
+    nginx_config.save_nginx_config("./nginx.generated.conf")
+
     hy2_config = Hy2Config("./hy2_config.yaml")
     hy2_config.update_hy2_config(xray_name, user_dict)
-    hy2_config.save_hy2_config("./hy2_config.yaml")
+    hy2_config.save_hy2_config("./hy2_config.generated.yaml")
 
     nic_manager = NICManager()
     nic_manager.update_iptables_nat_rule()
@@ -91,11 +106,12 @@ class CertificateUpdate:
         #    certbot/dns-cloudflare renew \
         #    --dns-cloudflare-credentials /.token
         commands = [
-            "docker run -it --rm --net=host --name certbot",
+            "docker run --rm --net=host --name certbot",
             "-v '/etc/letsencrypt:/etc/letsencrypt'",
             "-v '/var/lib/letsencrypt:/var/lib/letsencrypt'",
             f"-v '{self.dns_file}:/.token'",
             "certbot/dns-cloudflare renew",
+            "--non-interactive",
             "--dns-cloudflare-credentials /.token"
         ]
         os.system(" ".join(commands))
@@ -105,7 +121,7 @@ class CertificateUpdate:
 
 
 if __name__ == "__main__":
-    args = get_args()
+    args = read_missing_args(get_args())
     password = args.password
     dns_name = args.dns_name
 
@@ -118,9 +134,9 @@ if __name__ == "__main__":
     certificate_manager.update_certificate()
     restart_docker_compose()
 
-    get_stats_token(password)
+    stats_token = get_stats_token(password)
     env_manager = EnvManager()
-    env_manager.update_env_file(password)
+    env_manager.update_env_file(stats_token)
 
     update_systemctl()
 
